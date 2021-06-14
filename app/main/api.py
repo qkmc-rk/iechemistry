@@ -209,6 +209,7 @@ def fitting():
     else:
         return jsonify(code = -1, message = 'one error accured,I dont know what to do next...')
 
+# 获取用户的所有 formula
 @main.route("/formula", methods=["GET"])
 def getMyFormula():
     openid = iecuserService.getOpenidInRedis(request.headers.get("token"))
@@ -307,6 +308,52 @@ def cleanServerTmp():
         return jsonify(code=1, message="clean tmp succee!d")
     else:
         return jsonify(code=-1, message="clean tmp failed!")
+
+# 增加接口 1. 获得用户的公式列表 见上方/formula get
+#  2. 删除公式
+#  3. 增加公式
+
+
+@main.route("/deleteformula", methods=["POST"])
+def deleteMyFormula():
+    formulaid = request.args["formulaid"]
+    rs = iecImageService.deleteFormulaById(formulaid)
+    if rs != -1:
+        return jsonify(code=1, message="删除公式成功")
+    else:
+        return jsonify(code=-1, message="删除公式失败")
+
+
+'''
+    power = db.Column(db.Integer)
+    a = db.Column(db.Float, nullable=True)
+    b = db.Column(db.Float, nullable=True)
+    c = db.Column(db.Float, nullable=True)
+    d = db.Column(db.Float, nullable=True)
+    r2 = db.Column(db.Float, nullable=True)
+    y = db.Column(db.String(255))
+    x = db.Column(db.String(255))
+    remark  = db.Column(db.String(255))
+'''
+@main.route("addformula", methods=["POST"])
+def addOneFormula():
+    openid = iecuserService.getOpenidInRedis(request.headers.get("token"))
+    user = iecuserService.getUserByOpenid(openid)
+    userid = user.id
+    remark = request.args['remark']
+    power = request.args['power']
+    a = request.args['a']
+    b = request.args['b']
+    c = request.args['c']
+    d = request.args['d']
+    r2 = request.args['r2']
+    x = request.args['x']
+    y = request.args['y']
+    formula = iecImageService.saveFormula(userid, remark, power, a, b, c, d, r2, x, y)
+    if formula == None:
+        return jsonify(code=-1, message="增加公式失败")
+    else:
+        return jsonify(code=1, message="增加公式成功", formula=RKJsonEncoder.formulatodict(formula))
 
 #-----------------------------------------------------------------------------
 #----------------------------common method------------------------------------

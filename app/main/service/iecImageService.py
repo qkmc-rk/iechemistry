@@ -34,10 +34,28 @@ def saveByUrl(url, userid, remark):
         print(e)
         return None
 
+def saveFormula(userid, remark, power, a, b, c, d, r2, x, y):
+    try:
+        formula = IecExpFormula(userid=userid, remark=remark, power=power, a=a, b=b, c=c, d=d, r2=r2, x=x, y=y, imageid=0)
+        db.session.add(formula)
+        db.session.commit()
+        return formula
+    except Error as e:
+        print(e)
+        return None
+
 def getImageById(id):
     image = IecExpImage.query.filter_by(id = id).first()
     return image
 
+def deleteFormulaById(formulaid):
+    try:
+        formula = IecExpFormula.query.filter_by(id = formulaid).first()
+        db.session.delete(formula)
+        db.session.commit()
+        return 1
+    except Exception as e:
+        return -1
 
 def getAllPredictByUserId(userid):
     datas = db.session.query(IecExpPredict.id, IecExpPredict.imageid, IecExpPredict.userid, IecExpPredict.concentration, IecExpPredict.formulaid, \
