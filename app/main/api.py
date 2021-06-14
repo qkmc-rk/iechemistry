@@ -335,7 +335,7 @@ def deleteMyFormula():
     x = db.Column(db.String(255))
     remark  = db.Column(db.String(255))
 '''
-@main.route("addformula", methods=["POST"])
+@main.route("/addformula", methods=["POST"])
 def addOneFormula():
     openid = iecuserService.getOpenidInRedis(request.headers.get("token"))
     user = iecuserService.getUserByOpenid(openid)
