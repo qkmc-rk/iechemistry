@@ -25,6 +25,7 @@ class Config:
 class DevelopmentConfig(Config):
     """开发模式的配置信息"""
     SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:@Sicau211@127.0.0.1:3306/iechemistry'
+    SQLALCHEMY_POOL_SIZE = 100
     # SESSION_REDIS = redis.Redis(host='127.0.0.1', port=6379, password="jamkung", db=2)  # 操作的redis配置
     SESSION_REDIS = redis.Redis(host='127.0.0.1', port=6379, db=2)  # 操作的redis配置
     DEBUG = True

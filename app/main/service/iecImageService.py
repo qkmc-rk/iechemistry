@@ -36,7 +36,7 @@ def saveByUrl(url, userid, remark):
 
 def saveFormula(userid, remark, power, a, b, c, d, r2, x, y):
     try:
-        formula = IecExpFormula(userid=userid, remark=remark, power=power, a=a, b=b, c=c, d=d, r2=r2, x=x, y=y, imageid=0)
+        formula = IecExpFormula(userid=userid, remark=remark, power=power, a= a, b= b, c=c, d=d, r2=r2, x=x, y=y, imageid=0)
         db.session.add(formula)
         db.session.commit()
         return formula
@@ -90,7 +90,7 @@ def fit(method, axiosx, axiosy, imageid, remark, userid):
     # 根据method取线性拟合或者二次拟合或者其它, 根据axiosx取R G B, 根据axiosy取浓度, 根绝remark取名字
     x = getRorGorBbyX(axiosx, rgb, hsv)
     y = getCbyAxiosy(axiosy, concentration)
-    a, b, r2 = yolov3Api.fit(method, x, y, remark)
+    a, b, r2 = yolov3Api.fit(method, x, y, remark, axiosx)
     # tolov3处理完这里还要上传到七牛云,然后存数据库,然后在返回
     rs = uploadFileByQiniu(os.path.join(UPLOAD_DIR_SCATTER,remark + ".jpg"), remark + "_scatter.jpg")
     rs2 = uploadFileByQiniu(os.path.join(UPLOAD_DIR_LINEAR,remark + ".jpg"), remark + "_linear.jpg")
@@ -99,7 +99,7 @@ def fit(method, axiosx, axiosy, imageid, remark, userid):
     # 存数据库
     iecExpScatter = IecExpScatter(imageid=imageid, url=url_scatter, remark=remark)
     iecExpLinear = IecExpLinear(imageid=imageid, url=url_linear, remark=remark)
-    iecExpFormula = IecExpFormula(imageid=imageid, userid=userid, power=1, a= a, b= b, r2= r2, remark=remark, y= axiosy, x= axiosx)
+    iecExpFormula = IecExpFormula(imageid=imageid, userid=userid, power=1, a=a, b=b, r2=r2, remark=remark, y= axiosy, x= axiosx)
     try:
         db.session.add(iecExpScatter)
         db.session.add(iecExpLinear)
@@ -222,9 +222,11 @@ def getColorByImageId(imageid, formula):
     axiosx = formula.x
     axiosy = formula.y
     rgb = []
+    hsv = []
     for iecExpColor in iecExpColors:
         rgb.append(iecExpColor.rgb.split(" "))
-    x_data = getRorGorBbyX(axiosx, rgb)
+        hsv.append(iecExpColor.hsv.split(" "))
+    x_data = getRorGorBbyX(axiosx, rgb, hsv)
     return x_data
 
 

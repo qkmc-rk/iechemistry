@@ -245,24 +245,28 @@ def predict():
     filename = downloadBinary(image.url, image.remark, imgpath) # 1234.jpg
 
     # 已经得到了object region rgb
-    obj_num = yolov3Api.orrh(image.remark, xmin=right, xmax=left, ymin=bottom, ymax=top) # remark是图像和浓度文件的名称
+    obj_num = yolov3Api.orrh(image.remark, xmin=left, xmax=right, ymin=top, ymax=bottom) # remark是图像和浓度文件的名称
     if int(obj_num) != int(number):
         return jsonify(code = -1, message = '图像中有%s个试管,实际有%s个, 请重新上传图像' % (obj_num, number))
     else:
         # 图像分割处理完成 saveProcessWithoutConcentration
         openid = iecuserService.getOpenidInRedis(request.headers.get("token"))
         user = iecuserService.getUserByOpenid(openid)
-        result = iecImageService.saveProcessWithoutConcentration(user.id, imageid, image.remark, number, remark)
-        if int(result) == -1:
-            return jsonify(code = -1, message = '存入数据库遇到异常')
-        formula = iecImageService.getFormulasByFormulaId(formulaid)
-        # 没有报错, 返回的是imageid, 接着根据 formulaid找到公式, 然后预测出浓度, 存到数据库, 然后返回浓度到前端
-        iecExpPredict = iecImageService.predict(user.id, imageid, formulaid)
-        if iecExpPredict != None:
-            return jsonify(code= 1, message='预测成功!', iecExpPredict= RKJsonEncoder.predicttodict(iecExpPredict), formula= RKJsonEncoder.formulatodict(formula))
-        else:
-            return jsonify(code= -1, message='预测失败!', iecExpPredict= "")
-    pass
+        try:
+            result = iecImageService.saveProcessWithoutConcentration(user.id, imageid, image.remark, number, remark)
+            if int(result) == -1:
+                return jsonify(code = -1, message = '存入数据库遇到异常')
+            formula = iecImageService.getFormulasByFormulaId(formulaid)
+            # 没有报错, 返回的是imageid, 接着根据 formulaid找到公式, 然后预测出浓度, 存到数据库, 然后返回浓度到前端
+            iecExpPredict = iecImageService.predict(user.id, imageid, formulaid)
+            if iecExpPredict != None:
+                return jsonify(code= 1, message='预测成功!', iecExpPredict= RKJsonEncoder.predicttodict(iecExpPredict), formula= RKJsonEncoder.formulatodict(formula))
+            else:
+                return jsonify(code= -1, message='预测失败!', iecExpPredict= "")
+        except ValueError as ve:
+            ve.with_traceback(None)
+            print(ve)
+            return jsonify(code= -1, message='cannot convert float NaN to integer', iecExpPredict= "")
 
 @main.route("/predictrecord", methods=["GET"])
 def getPredictRecord():

@@ -65,7 +65,7 @@ def linear(x: list, a, b):
     return y
 
 # 根据传入的参数做线性回归
-def plot_linear_img(model, x, y, title, color, savePath):
+def plot_linear_img(model, x, y, title, color, savePath, xlabel = "color chanel"):
     x = np.array(x).reshape(-1, 1)
     y = np.array(y).reshape(-1, 1)
     print('plot_linear_img:')
@@ -77,20 +77,23 @@ def plot_linear_img(model, x, y, title, color, savePath):
     a = model.coef_[0][0]
     # 截距
     b = model.intercept_[0]
+    a , b, r2 = float(('%.4f') % a), float(('%.4f') % b), float(('%.4f') % model.score(x, y))
     if b < 0:
-        title = "%s - y = %s x %s - R²:%f" % (title, str(a), str(b), model.score(x, y))
+        title = "%s \n y = %s x + (%s) \n R²: %f" % (title, str(a), str(b), model.score(x, y))
         print('y = %s x %s - R²:%f' % (str(a), str(b), model.score(x, y)))
     else:
-        title = "%s - y = %sx + %s - R²:%f" % (title, str(a), str(b), model.score(x, y))
+        title = "%s \n y = %s x + (%s) \n R²: %f" % (title, str(a), str(b), model.score(x, y))
         print('y = %s x + %s - R²:%f' % (str(a), str(b), model.score(x, y)))
-    y2 = linear(x, a, b)
+    y2 = linear(x, a, b) 
     print(y2)
+    plt.xlabel(xlabel)
+    plt.ylabel("Concentration")
     plt.plot(x, y2, color=color)
     plt.scatter(x, y, color=color)
     plt.title(title)
     plt.savefig(savePath)
     plt.cla()
-    return a, b, model.score(x, y)
+    return a, b, r2
 
 # 线性回归的模型
 model = linear_model.LinearRegression()
@@ -199,17 +202,21 @@ def orrh(imgname, xmin = 1/5, xmax = 4/5, ymin = 3/6, ymax = 5/6):
 '''
 拟合
 '''
-def fit(method: str, axiosx_data: list, axiosy_data: list, remark: str):
+def fit(method: str, axiosx_data: list, axiosy_data: list, remark: str, xlabel = "color chanel"):
     print('fit')
     print(axiosx_data)
     print(axiosy_data)
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     try:
+        plt.xlabel(xlabel)
+        plt.ylabel("Concentration")
         plt.scatter(axiosx_data, axiosy_data, color='red')
-        plt.title("scatter image")
+        plt.title("scatter - %s" % remark)
         plt.savefig('./predict_result/scatter/%s.jpg' % remark)
         plt.cla()
-        a, b, r2 = plot_linear_img(model, axiosx_data, axiosy_data, 'regression', 'red', './predict_result/linear_regression/%s.jpg' % remark)
+        a, b, r2 = plot_linear_img(model, axiosx_data, axiosy_data, 'linear regression - %s' % remark, 'red', './predict_result/linear_regression/%s.jpg' % remark, xlabel)
+        
+        print('finally a b r2:%s %s %s' % (a,b,r2))
         return a, b, r2
     except Error as e:
         print(e)
