@@ -9,6 +9,7 @@ import os
 from dl.yolov3 import yolov3Api
 import random
 import json
+import colorsys
 
 UPLOAD_DIR_OBJECT = "predict_result/obj"
 UPLOAD_DIR_REGION = "predict_result/region"
@@ -90,10 +91,15 @@ def fit(method, axiosx, axiosy, imageid, remark, userid):
     # 根据method取线性拟合或者二次拟合或者其它, 根据axiosx取R G B, 根据axiosy取浓度, 根绝remark取名字
     x = getRorGorBbyX(axiosx, rgb, hsv)
     y = getCbyAxiosy(axiosy, concentration)
+    print('----------------看看拿到的数据--------------')
+    print(concentration)
+    print(x)
+    print(y)
     a, b, r2 = yolov3Api.fit(method, x, y, remark, axiosx)
     # tolov3处理完这里还要上传到七牛云,然后存数据库,然后在返回
-    rs = uploadFileByQiniu(os.path.join(UPLOAD_DIR_SCATTER,remark + ".jpg"), remark + "_scatter.jpg")
-    rs2 = uploadFileByQiniu(os.path.join(UPLOAD_DIR_LINEAR,remark + ".jpg"), remark + "_linear.jpg")
+    uid = str(random.randint(0,99999))
+    rs = uploadFileByQiniu(os.path.join(UPLOAD_DIR_SCATTER,remark + ".jpg"), remark + "_" + uid + "_scatter.jpg")
+    rs2 = uploadFileByQiniu(os.path.join(UPLOAD_DIR_LINEAR,remark + ".jpg"), remark + "_" + uid + "_linear.jpg")
     url_scatter = rs['url']
     url_linear = rs2['url']
     # 存数据库
@@ -113,7 +119,7 @@ def fit(method, axiosx, axiosy, imageid, remark, userid):
         return -1
 
 def getLinearByInamgeId(imageid):
-    linear = IecExpLinear.query.filter_by(imageid = imageid).first()
+    linear = IecExpLinear.query.filter_by(imageid = imageid).order_by(IecExpLinear.modify_time.desc()).first()
     return linear
 
 def getFormulasByUserId(userid):
@@ -172,7 +178,7 @@ def statistic1(userid):
 
 
 def getScatterByInamgeId(imageid):
-    scatter = IecExpScatter.query.filter_by(imageid = imageid).first()
+    scatter = IecExpScatter.query.filter_by(imageid = imageid).order_by(IecExpScatter.modify_time.desc()).first()
     return scatter
     
 def getFormulasByFormulaId(formulaid):
@@ -259,8 +265,10 @@ def saveProcessWithoutConcentration(userid, imageid, imageremark, number, remark
             region_id = region_id + 1
             color_id = color_id + 1
             color_rgb = "%s %s %s" % (color[i][0],color[i][1],color[i][2])
-            color_hsv = "%s %s %s" % (color[i][0],color[i][1],color[i][2])
-            color_cmyk = "%s %s %s" % (color[i][0],color[i][1],color[i][2])
+            hsv = colorsys.rgb_to_hsv(color[i][0],color[i][1],color[i][2])
+            color_hsv = "%.2f %.2f %.2f" % (hsv[0],hsv[1],hsv[2])
+            cmyk = rgb_to_cmyk(color[i][0],color[i][1],color[i][2])
+            color_cmyk = "%.2f %.2f %.2f %.2f" % (cmyk[0], cmyk[1], cmyk[2], cmyk[3])
             iecExpObject = IecExpObject(id=obj_id, userid=userid, imageid=imageid, url=obj_url, remark=remark)
             iecExpRegion = IecExpRegion(id=region_id, userid=userid, imageid=imageid, objectid=obj_id, url=region_url, remark=remark)
             iecExpColor = IecExpColor(id=color_id, userid=userid, imageid=imageid, objectid=obj_id, regionid=region_id, rgb=color_rgb, hsv=color_hsv, cmyk = color_cmyk)
@@ -315,8 +323,10 @@ def saveProcess1(userid, imageid, imageremark, number, remark, concentration):
             concentration_id = concentration_id + 1
             color_id = color_id + 1
             color_rgb = "%s %s %s" % (color[i][0],color[i][1],color[i][2])
-            color_hsv = "%s %s %s" % (color[i][0],color[i][1],color[i][2])
-            color_cmyk = "%s %s %s" % (color[i][0],color[i][1],color[i][2])
+            hsv = colorsys.rgb_to_hsv(color[i][0],color[i][1],color[i][2])
+            color_hsv = "%.2f %.2f %.2f" % (hsv[0],hsv[1],hsv[2])
+            cmyk = rgb_to_cmyk(color[i][0],color[i][1],color[i][2])
+            color_cmyk = "%.2f %.2f %.2f %.2f" % (cmyk[0], cmyk[1], cmyk[2], cmyk[3])
             iecExpObject = IecExpObject(id=obj_id, userid=userid, imageid=imageid, url=obj_url, remark=remark)
             iecExpRegion = IecExpRegion(id=region_id, userid=userid, imageid=imageid, objectid=obj_id, url=region_url, remark=remark)
             iecExpConcentration = IecExpConcentration(id=concentration_id, userid=userid, imageid=imageid, objectid=obj_id, regionid=region_id, concentration=concentration[i])
@@ -362,6 +372,7 @@ G/B与浓度C，R/B与浓度C，R/G与浓度C，S/V与浓度C，H/S与浓度C
 '''
 def getRorGorBbyX(axiosx, rgb, hsv):
     rgb = np.array(rgb, dtype=np.int)
+    hsv = np.array(hsv, dtype=np.float)
     if axiosx == 'R':
         return rgb.T[2]
     elif axiosx == 'G':
@@ -396,6 +407,23 @@ def getCbyAxiosy(axiosy, concentration):
         return None
 
 
+def rgb_to_cmyk(r,g,b):
+    cmyk_scale = 100
+    if (r == 0) and (g == 0) and (b == 0):
+        # black
+        return 0, 0, 0, cmyk_scale
 
+    # rgb [0,255] -> cmy [0,1]
+    c = 1 - r / 255.
+    m = 1 - g / 255.
+    y = 1 - b / 255.
 
+    # extract out k [0,1]
+    min_cmy = min(c, m, y)
+    c = (c - min_cmy) / (1 - min_cmy)
+    m = (m - min_cmy) / (1 - min_cmy)
+    y = (y - min_cmy) / (1 - min_cmy)
+    k = min_cmy
 
+    # rescale to the range [0,cmyk_scale]
+    return c*cmyk_scale, m*cmyk_scale, y*cmyk_scale, k*cmyk_scale

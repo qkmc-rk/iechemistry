@@ -99,8 +99,8 @@ def getUserInfo():
     openid = iecuserService.getOpenidInRedis(request.headers.get("token"))
     user = iecuserService.getUserByOpenid(openid)
     if user == None:
-        return jsonify(message="获取失败", code=-1)
-    return jsonify( code=1, message="获取成功", user = RKJsonEncoder.usertodict(user))
+        return jsonify(message="get data failed", code=-1)
+    return jsonify( code=1, message="get data success", user = RKJsonEncoder.usertodict(user))
 
 
 # 保存图像信息
@@ -134,13 +134,13 @@ def saveImage():
         # 调用七牛云来干点正事
         rs = uploadFileByQiniu(os.path.join(UPLOAD_DIR,filename), filename)
         if rs['code'] == -1:
-            return jsonify(code=-1, message='保存图像失败, 上传到七牛云失败')
+            return jsonify(code=-1, message='save picture failed, upload to qiniu failed')
         elif rs['code'] == 1:
             # 上传成功 保存到数据库
             openid = iecuserService.getOpenidInRedis(request.headers.get("token"))
             user = iecuserService.getUserByOpenid(openid)
             image = iecImageService.saveByUrl(rs['url'], user.id, remark)
-            return jsonify(code=1, message='上传成功', image = RKJsonEncoder.imagetodict(image))
+            return jsonify(code=1, message='upload success', image = RKJsonEncoder.imagetodict(image))
     except Error as e:
         return jsonify(code=-1, message='%s' % e.with_traceback)
 
@@ -170,7 +170,7 @@ def process1():
     # 处理
     obj_num = yolov3Api.orrh(image.remark, xmin=left, xmax=right, ymin=top, ymax=bottom) # remark是图像和浓度文件的名称
     if int(obj_num) != int(number):
-        return jsonify(code = -1, message = '图像中有%s个试管,实际有%s个, 请重新上传图像' % (obj_num, number))
+        return jsonify(code = -1, message = 'algorithm cannot work with this image,%s tubes in image,%s tubes actually' % (obj_num, number))
     else:
         # 先存数据库在返回成功的信息
         # 需要保存:concentration, object, region, color  这些内容需要使用事务机制保存，保证它们是一致的
@@ -179,8 +179,8 @@ def process1():
         user = iecuserService.getUserByOpenid(openid)
         result = iecImageService.saveProcess1(user.id, imageid, image.remark, number, remark, concentration)
         if int(result) == 1:
-            return jsonify(code = 1, message = '%d个试管处理完毕!'%obj_num, userid = user.id, imageid = imageid)
-        return jsonify(code = -1, message = '存入数据库遇到异常')
+            return jsonify(code = 1, message = '%d tubes processed!'%obj_num, userid = user.id, imageid = imageid)
+        return jsonify(code = -1, message = 'cannot save to database.')
 
 
 @main.route("/processresult", methods=["GET"])
@@ -200,6 +200,12 @@ def fitting():
     imageid = request.args['imageid'] #imageid可以拿到remark
     image = iecImageService.getImageById(imageid)
     remark = image.remark
+    print("/fit api")
+    print(method)
+    print(axiosy)
+    print(axiosx)
+    print(imageid)
+    print(remark)
     result = iecImageService.fit(method, axiosx, axiosy, imageid, remark, user.id)
     if result == 1:
         # 查询scatter和linear然后返回
@@ -247,7 +253,7 @@ def predict():
     # 已经得到了object region rgb
     obj_num = yolov3Api.orrh(image.remark, xmin=left, xmax=right, ymin=top, ymax=bottom) # remark是图像和浓度文件的名称
     if int(obj_num) != int(number):
-        return jsonify(code = -1, message = '图像中有%s个试管,实际有%s个, 请重新上传图像' % (obj_num, number))
+        return jsonify(code = -1, message = 'algorithm cannot work with this image,%s tubes in image,%s tubes actually' % (obj_num, number))
     else:
         # 图像分割处理完成 saveProcessWithoutConcentration
         openid = iecuserService.getOpenidInRedis(request.headers.get("token"))
@@ -255,14 +261,14 @@ def predict():
         try:
             result = iecImageService.saveProcessWithoutConcentration(user.id, imageid, image.remark, number, remark)
             if int(result) == -1:
-                return jsonify(code = -1, message = '存入数据库遇到异常')
+                return jsonify(code = -1, message = 'exception with saving to db.')
             formula = iecImageService.getFormulasByFormulaId(formulaid)
             # 没有报错, 返回的是imageid, 接着根据 formulaid找到公式, 然后预测出浓度, 存到数据库, 然后返回浓度到前端
             iecExpPredict = iecImageService.predict(user.id, imageid, formulaid)
             if iecExpPredict != None:
-                return jsonify(code= 1, message='预测成功!', iecExpPredict= RKJsonEncoder.predicttodict(iecExpPredict), formula= RKJsonEncoder.formulatodict(formula))
+                return jsonify(code= 1, message='success!', iecExpPredict= RKJsonEncoder.predicttodict(iecExpPredict), formula= RKJsonEncoder.formulatodict(formula))
             else:
-                return jsonify(code= -1, message='预测失败!', iecExpPredict= "")
+                return jsonify(code= -1, message='failed!', iecExpPredict= "")
         except ValueError as ve:
             ve.with_traceback(None)
             print(ve)
@@ -298,9 +304,9 @@ def expstatistic():
     userid = user.id
     result = iecImageService.statistic1(userid)
     if result != None:
-        return jsonify(code=1, message="统计数据成功" , data=result)
+        return jsonify(code=1, message="success" , data=result)
     else:
-        return jsonify(code=-1, message="统计数据失败")
+        return jsonify(code=-1, message="failed")
 
 @main.route("/clean", methods=["GET"])
 def cleanServerTmp():
@@ -323,9 +329,9 @@ def deleteMyFormula():
     formulaid = request.args["formulaid"]
     rs = iecImageService.deleteFormulaById(formulaid)
     if rs != -1:
-        return jsonify(code=1, message="删除公式成功")
+        return jsonify(code=1, message="success")
     else:
-        return jsonify(code=-1, message="删除公式失败")
+        return jsonify(code=-1, message="failed")
 
 
 '''
@@ -355,9 +361,9 @@ def addOneFormula():
     y = request.args['y']
     formula = iecImageService.saveFormula(userid, remark, power, a, b, c, d, r2, x, y)
     if formula == None:
-        return jsonify(code=-1, message="增加公式失败")
+        return jsonify(code=-1, message="failed")
     else:
-        return jsonify(code=1, message="增加公式成功", formula=RKJsonEncoder.formulatodict(formula))
+        return jsonify(code=1, message="success", formula=RKJsonEncoder.formulatodict(formula))
 
 #-----------------------------------------------------------------------------
 #----------------------------common method------------------------------------
@@ -409,7 +415,7 @@ def uploadFileByQiniu(filePath, fileName):
         return {'code':1, 'url': QINIU_URL + key, 'key': key}
     except:
         print("上传出错")
-        return {'code': -1, 'message': "上传出错"}
+        return {'code': -1, 'message': "failed"}
     
 '''
     url: 图片的url

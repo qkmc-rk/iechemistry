@@ -86,13 +86,15 @@ def plot_linear_img(model, x, y, title, color, savePath, xlabel = "color chanel"
         print('y = %s x + %s - R²:%f' % (str(a), str(b), model.score(x, y)))
     y2 = linear(x, a, b) 
     print(y2)
-    plt.xlabel(xlabel)
-    plt.ylabel("Concentration")
-    plt.plot(x, y2, color=color)
-    plt.scatter(x, y, color=color)
+
+    # 由于前端要求, 把浓度和RGB换个轴象限
+    plt.xlabel("Concentration")
+    plt.ylabel(xlabel)
+    plt.plot(y2, x, color=color)
+    plt.scatter(y, x, color=color)
     plt.title(title)
     plt.savefig(savePath)
-    plt.cla()
+    plt.clf()
     return a, b, r2
 
 # 线性回归的模型
@@ -122,15 +124,6 @@ yolo = YOLO()
     返回值会返回object的个数
 '''
 def orrh(imgname, xmin = 1/5, xmax = 4/5, ymin = 3/6, ymax = 5/6):
-    # 开始之前先把文件夹清空
-    #print('清理predict_result文件夹...')
-    #cleanPath.del_file("./predict_result/bgr")
-    #cleanPath.del_file("./predict_result/linear_regression")
-    #cleanPath.del_file("./predict_result/obj")
-    #cleanPath.del_file("./predict_result/pos")
-    #cleanPath.del_file("./predict_result/region")
-    #cleanPath.del_file("./predict_result/scatter")
-    #print('清理predict_result文件夹完毕！！！')
     number = 0 # 分割出的object的数量
     # 保证读取文件不会出现问题 @mrruan
     print("-------------orrh--------------")
@@ -157,6 +150,9 @@ def orrh(imgname, xmin = 1/5, xmax = 4/5, ymin = 3/6, ymax = 5/6):
     print('\n')
     
     for i in range(0, len(imgtable)):
+        # 不是目标试管 跳过
+        if not (imgname in imgtable[i]):
+            continue
         # 读取文件, 然后根据文件将obj给裁剪出来
         posStr = np.loadtxt(imgtable[i], dtype=str)
         file_name = posStr[0][0]
@@ -208,12 +204,13 @@ def fit(method: str, axiosx_data: list, axiosy_data: list, remark: str, xlabel =
     print(axiosy_data)
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     try:
-        plt.xlabel(xlabel)
-        plt.ylabel("Concentration")
-        plt.scatter(axiosx_data, axiosy_data, color='red')
+        # 由于前端要求, 把浓度和RGB换个轴象限
+        plt.xlabel("Concentration")
+        plt.ylabel(xlabel)
+        plt.scatter(axiosy_data, axiosx_data, color='red')
         plt.title("scatter - %s" % remark)
         plt.savefig('./predict_result/scatter/%s.jpg' % remark)
-        plt.cla()
+        plt.clf()
         a, b, r2 = plot_linear_img(model, axiosx_data, axiosy_data, 'linear regression - %s' % remark, 'red', './predict_result/linear_regression/%s.jpg' % remark, xlabel)
         
         print('finally a b r2:%s %s %s' % (a,b,r2))
