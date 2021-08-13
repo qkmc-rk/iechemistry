@@ -62,6 +62,7 @@ def linear(x: list, a, b):
     y = []
     for i in range(0, len(x)):
         y.append(a * float(x[i]) + b)
+    # print(y)
     return y
 
 # 根据传入的参数做线性回归
@@ -70,20 +71,29 @@ def plot_linear_img(model, x, y, title, color, savePath, xlabel = "color chanel"
     y = np.array(y).reshape(-1, 1)
     print('plot_linear_img:')
     print(x)
+    print(type(x))
     print(y)
+    print(type(y))
     model.fit(x, y)
     print('model.score:%f' % model.score(x, y))
+    print(model.coef_[0])
+    print(model.intercept_)
     # 系数
     a = model.coef_[0][0]
     # 截距
     b = model.intercept_[0]
+    # 修改 a , b,因为x和y反转了，所以tittle显示的a和b也要改
+    _ka = 1/a
+    _kb = -1*b/a
+
     a , b, r2 = float(('%.4f') % a), float(('%.4f') % b), float(('%.4f') % model.score(x, y))
-    if b < 0:
-        title = "%s \n y = %s x + (%s) \n R²: %f" % (title, str(a), str(b), model.score(x, y))
-        print('y = %s x %s - R²:%f' % (str(a), str(b), model.score(x, y)))
+    _ka , _kb, r2 = float(('%.4f') % _ka), float(('%.4f') % _kb), float(('%.4f') % model.score(x, y))
+    if _kb < 0:
+        title = "%s \n y = %s x + (%s) \n R²: %f" % (title, str(_ka), str(_kb), model.score(x, y))
+        print('y = %s x %s - R²:%f' % (str(_ka), str(_kb), model.score(x, y)))
     else:
-        title = "%s \n y = %s x + (%s) \n R²: %f" % (title, str(a), str(b), model.score(x, y))
-        print('y = %s x + %s - R²:%f' % (str(a), str(b), model.score(x, y)))
+        title = "%s \n y = %s x + (%s) \n R²: %f" % (title, str(_ka), str(_kb), model.score(x, y))
+        print('y = %s x + %s - R²:%f' % (str(_ka), str(_kb), model.score(x, y)))
     y2 = linear(x, a, b) 
     print(y2)
 
@@ -155,6 +165,15 @@ def orrh(imgname, xmin = 1/5, xmax = 4/5, ymin = 3/6, ymax = 5/6):
             continue
         # 读取文件, 然后根据文件将obj给裁剪出来
         posStr = np.loadtxt(imgtable[i], dtype=str)
+        # print('posStr:')
+        # print(posStr)
+        # print(len(posStr[0]))
+        # np_array = np.array(posStr)
+        # if np_array.ndim == 1:
+        #     file_name = posStr[0]
+        # else:
+        #     file_name = posStr[0][0]
+        # print(file_name)
         file_name = posStr[0][0]
         file_name = file_name.split("/")[1]
         # 两次变换只取出每一个obj的pos信息,删除其它信息
